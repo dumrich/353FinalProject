@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="shoulder-joint">
+  <compiler angle="radian" meshdir="assets" autolimits="true" />
+  <option gravity="0 0 -9.81" timestep="0.000375" />
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+    <global azimuth="160" elevation="-20" />
+  </visual>
+
+  <asset>
+    <mesh file="wing.stl" />
+    <material name="wing_material" rgba="0.615686 0.811765 0.929412 1" />
+  </asset>
+
+  <default>
+    <default class="shoulder-joint">
+      <joint frictionloss="0.1" armature="0.005" />
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2" />
+      </default>
+      <default class="collision">
+        <geom group="3" />
+      </default>
+    </default>
+    <default class="string">
+      <tendon width="0.00075" rgba="0.8 0.2 0.2 1" limited="true" stiffness="50" damping="0.05" />
+    </default>
+  </default>
+
+  <worldbody>
+    <!-- Movable strut assembly (part_1) attached via free joint, with wing attached to it. -->
+    <body name="part_1" pos="0.005 0.08 0.25" childclass="shoulder-joint" quat="0.707107 -0.707107 0.0 0.0">
+      <freejoint name="part_1_freejoint" />
+      <geom name="part_1_rod_0" type="capsule" fromto="0.07136234666666666 -0.0017373466666666666 0.010695746666666665 0.07136234666666666 0.0018626533333333333 0.010695746666666665" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_1" type="capsule" fromto="0.05306234666666666 -0.0017373466666666666 0.03478790666666666 0.05306234666666666 0.0018626533333333333 0.03478790666666666" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_2" type="capsule" fromto="0.032062346666666665 -0.0017373466666666666 0.03478790666666666 0.032062346666666665 0.0018626533333333333 0.03478790666666666" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_3" type="capsule" fromto="0.013762346666666665 -0.0017373466666666666 0.010695746666666665 0.013762346666666665 0.0018626533333333333 0.010695746666666665" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_4" type="capsule" fromto="0.07136210666666666 6.289333333333334e-05 0.010695746666666665 0.053062106666666664 6.289333333333334e-05 0.034788146666666665" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_5" type="capsule" fromto="0.053062106666666664 6.289333333333334e-05 0.034788146666666665 0.032062106666666666 6.289333333333334e-05 0.034788146666666665" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_1_rod_6" type="capsule" fromto="0.032062106666666666 6.289333333333334e-05 0.034788146666666665 0.013762106666666666 6.289333333333334e-05 0.010695746666666665" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+
+      <site name="part_1_t1" pos="0.07136234666666666 -0.0017373466666666666 0.010695746666666665" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t2" pos="0.05306234666666666 -0.0017373466666666666 0.03478790666666666" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t3" pos="0.032062346666666665 -0.0017373466666666666 0.03478790666666666" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t4" pos="0.013762346666666665 -0.0017373466666666666 0.010695746666666665" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t1_2" pos="0.07136234666666666 0.0018626533333333333 0.010695746666666665" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t2_2" pos="0.05306234666666666 0.0018626533333333333 0.03478790666666666" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t3_2" pos="0.032062346666666665 0.0018626533333333333 0.03478790666666666" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_1_t4_2" pos="0.013762346666666665 0.0018626533333333333 0.010695746666666665" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+
+      <body name="wing" pos="0.04256210666666667 6.289333333333334e-05 0.034788146666666665" childclass="shoulder-joint">
+        <joint name="wing_pitch" type="hinge" axis="0.0 0.0 1.0" limited="true" range="-1.0 1.0" springref="0.0" stiffness="0.003" damping="0.0005" armature="1e-05" ref="0.0" />
+        <geom name="wing_pitch_hub" type="sphere" pos="0.0 0.0 0.0" size="0.0035" mass="0.0005" rgba="0.95 0.45 0.1 1" contype="0" conaffinity="0" group="2" />
+        <geom name="wing_pitch_rod" type="capsule" fromto="0.0 0.0 0.0 0.0 0.0 0.018" size="0.0025" mass="0.001" rgba="0.95 0.45 0.1 1" class="visual" />
+        <geom name="wing_pitch_mount" type="capsule" fromto="0.0 0.0 0.018 -0.0019299 0.055 0.018095999999999998" size="0.0016" mass="0.0004" rgba="0.95 0.45 0.1 1" class="visual" />
+        <geom name="wing_mount_hub" type="sphere" pos="-0.0019299 0.055 0.018095999999999998" size="0.0026" mass="0.0002" rgba="0.95 0.45 0.1 1" contype="0" conaffinity="0" group="2" />
+        <geom type="mesh" mesh="wing" material="wing_material" pos="-0.0019299 0.055 0.018095999999999998" quat="0.521334 -0.477714 -0.521334 -0.477714" class="visual" />
+      </body>
+    </body>
+
+    <!-- Static base strut assembly (part_2) - rigidly fixed to world. -->
+    <body name="part_2" pos="0.0 0.11 0.25" childclass="shoulder-joint" quat="0.707107 -0.707107 0.0 0.0">
+      <geom name="part_2_rod_0" type="capsule" fromto="0.045410653333333335 0.02760491333333334 -0.0014160866666666667 0.049010653333333334 0.02760491333333334 -0.0014160866666666667" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_1" type="capsule" fromto="0.045410653333333335 0.009304913333333333 -0.026016086666666667 0.049010653333333334 0.009304913333333333 -0.026016086666666667" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_2" type="capsule" fromto="0.045410653333333335 -0.011695086666666667 -0.026016086666666667 0.049010653333333334 -0.011695086666666667 -0.026016086666666667" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_3" type="capsule" fromto="0.045410653333333335 -0.02999508666666666 -0.0014160866666666667 0.049010653333333334 -0.02999508666666666 -0.0014160866666666667" size="0.0012" mass="0.0010797839999999999" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_4" type="capsule" fromto="0.04721089333333334 0.027604973333333335 -0.001416026666666667 0.04721089333333334 0.009304973333333333 -0.026016026666666667" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_5" type="capsule" fromto="0.04721089333333334 0.009304973333333333 -0.026016026666666667 0.04721089333333334 -0.011695026666666667 -0.026016026666666667" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+      <geom name="part_2_rod_6" type="capsule" fromto="0.04721089333333334 -0.011695026666666667 -0.026016026666666667 0.04721089333333334 -0.029995026666666664 -0.001416026666666667" size="0.0024" mass="0.0021602159999999995" rgba="0.5 0.5 0.5 1" />
+
+      <site name="part_2_t1" pos="0.045410653333333335 0.02760491333333334 -0.0014160866666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t2" pos="0.045410653333333335 0.009304913333333333 -0.026016086666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t3" pos="0.045410653333333335 -0.011695086666666667 -0.026016086666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t4" pos="0.045410653333333335 -0.02999508666666666 -0.0014160866666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t1_2" pos="0.049010653333333334 -0.02999508666666666 -0.0014160866666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t2_2" pos="0.049010653333333334 -0.011695086666666667 -0.026016086666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t3_2" pos="0.049010653333333334 0.009304913333333333 -0.026016086666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      <site name="part_2_t4_2" pos="0.049010653333333334 0.02760491333333334 -0.0014160866666666667" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+    </body>
+
+    <!-- Motor pillars with rotating crank disks -->
+    <body name="t1_pillar" pos="0.13 0.05 0.0">
+      <inertial pos="0 0 0.11" mass="0.1" fullinertia="1e-4 1e-4 1e-4 0 0 0" />
+      <geom name="t1_pillar_geom" type="cylinder" size="0.004 0.11" pos="0 0 0.11" rgba="0.4 0.4 0.4 0.8" contype="0" conaffinity="0" group="2" />
+      <body name="t1_disk" pos="0 0 0.22" euler="0.26 0.0 0.0">
+        <joint name="t1_disk_hinge" type="hinge" axis="0 0 1" damping="0.001" armature="0.0001" />
+        <inertial pos="0 0 0" mass="0.02" fullinertia="1e-6 2e-6 1e-6 0 0 0" />
+        <geom name="t1_disk_geom" type="cylinder" size="0.015 0.002" rgba="0.85 0.65 0.15 1" contype="0" conaffinity="0" group="2" />
+        <site name="crank_disk_t1" pos="0.01875 0.00375 0.0" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      </body>
+    </body>
+
+    <body name="t4_pillar" pos="-0.034 0.05 0.0">
+      <inertial pos="0 0 0.11" mass="0.1" fullinertia="1e-4 1e-4 1e-4 0 0 0" />
+      <geom name="t4_pillar_geom" type="cylinder" size="0.004 0.11" pos="0 0 0.11" rgba="0.4 0.4 0.4 0.8" contype="0" conaffinity="0" group="2" />
+      <body name="t4_disk" pos="0 0 0.22" euler="0.26 0.0 0.0">
+        <joint name="t4_disk_hinge" type="hinge" axis="0 0 1" damping="0.001" armature="0.0001" />
+        <inertial pos="0 0 0" mass="0.02" fullinertia="1e-6 2e-6 1e-6 0 0 0" />
+        <geom name="t4_disk_geom" type="cylinder" size="0.015 0.002" rgba="0.85 0.65 0.15 1" contype="0" conaffinity="0" group="2" />
+        <site name="crank_disk_t4" pos="0.01875 0.00375 0.0" size="0.002" rgba="0.2 0.8 0.2 1" group="3" />
+      </body>
+    </body>
+  </worldbody>
+
+  <tendon>
+    <!-- Structural cables connecting part_1 sites to part_2 sites. -->
+    <spatial name="cable_t1__t1_2"   class="string" range="0.0 0.02418">
+      <site site="part_1_t1" />   <site site="part_2_t1_2" />
+    </spatial>
+    <spatial name="cable_t1__t2_2"   class="string" range="0.0 0.024480000000000002">
+      <site site="part_1_t1" />   <site site="part_2_t2_2" />
+    </spatial>
+    <spatial name="cable_t1_2__t3_2" class="string" range="0.0 0.024239999999999998">
+      <site site="part_1_t1_2" /> <site site="part_2_t3_2" />
+    </spatial>
+    <spatial name="cable_t1_2__t4_2" class="string" range="0.0 0.02502">
+      <site site="part_1_t1_2" /> <site site="part_2_t4_2" />
+    </spatial>
+    <spatial name="cable_t2__t1_2"   class="string" range="0.0 0.02454">
+      <site site="part_1_t2" />   <site site="part_2_t1_2" />
+    </spatial>
+    <spatial name="cable_t2_2__t4_2" class="string" range="0.0 0.023819999999999997">
+      <site site="part_1_t2_2" /> <site site="part_2_t4_2" />
+    </spatial>
+    <spatial name="cable_t3_2__t1"   class="string" range="0.0 0.02394">
+      <site site="part_1_t3_2" /> <site site="part_2_t1" />
+    </spatial>
+    <spatial name="cable_t4_2__t1"   class="string" range="0.0 0.02502">
+      <site site="part_1_t4_2" /> <site site="part_2_t1" />
+    </spatial>
+    <spatial name="cable_t3__t4"     class="string" range="0.0 0.02454">
+      <site site="part_1_t3" />   <site site="part_2_t4" />
+    </spatial>
+    <spatial name="cable_t4__t4"     class="string" range="0.0 0.0243">
+      <site site="part_1_t4" />   <site site="part_2_t4" />
+    </spatial>
+    <spatial name="cable_t4_2__t2"   class="string" range="0.0 0.0243">
+      <site site="part_1_t4_2" /> <site site="part_2_t2" />
+    </spatial>
+    <spatial name="cable_t4__t3"     class="string" range="0.0 0.02454">
+      <site site="part_1_t4" />   <site site="part_2_t3" />
+    </spatial>
+
+    <!-- Motor cables from crank disks to part_1 anchor sites.
+         These act as winches that pull the strut anchor toward the spinning
+         disk, so we leave them unlimited (limited="false") - hard length
+         limits would lock the disk every revolution. -->
+    <spatial name="motor_cable_t1" class="string" limited="false"
+             stiffness="200" damping="0.1" springlength="0.02"
+             solreflimit="0.02857142857142857 1.0">
+      <site site="part_1_t1" />
+      <site site="crank_disk_t1" />
+    </spatial>
+    <spatial name="motor_cable_t4" class="string" limited="false"
+             stiffness="200" damping="0.1" springlength="0.02"
+             solreflimit="0.02857142857142857 1.0">
+      <site site="part_1_t4" />
+      <site site="crank_disk_t4" />
+    </spatial>
+  </tendon>
+
+  <equality>
+    <!-- Crank disks rotate in opposite phase, like the original bi-shoulder. -->
+    <joint joint1="t1_disk_hinge" joint2="t4_disk_hinge" polycoef="3.14159 1.0 0.0 0.0 0.0" />
+  </equality>
+
+  <actuator>
+    <velocity name="motor_t1" joint="t1_disk_hinge" kv="0.25" ctrlrange="-10.0 10.0" />
+    <velocity name="motor_t4" joint="t4_disk_hinge" kv="0.25" ctrlrange="-10.0 10.0" />
+  </actuator>
+</mujoco>
