@@ -81,3 +81,5 @@ import numpy as np
 log = np.load("output/sample_log.npz")
 print(log["node_positions"].shape, log["tendon_stiffness"].shape)
 ```
+
+<!-- TODO: write up the spectral analysis section -->
