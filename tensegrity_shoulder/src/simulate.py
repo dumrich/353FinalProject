@@ -147,6 +147,81 @@ def visualize_graph(
         plt.close(fig)
 
 
+def plot_laplacian_eigenvectors(
+    graph: "TensegrityGraph",
+    eigvals: np.ndarray,
+    eigvecs: np.ndarray,
+    save_path: Path | None = None,
+    show: bool = True,
+) -> None:
+    """Plot every Laplacian eigenvector as a node-indexed bar chart.
+
+    One subplot per eigenvector, ordered by ascending eigenvalue. Bars are
+    colored by sign so node groupings (e.g., the Fiedler partition) are
+    immediately visible.
+    """
+    import threading
+
+    import matplotlib
+
+    on_main_thread = threading.current_thread() is threading.main_thread()
+    if not on_main_thread:
+        matplotlib.use("Agg", force=True)
+        if save_path is None:
+            save_path = OUTPUT_DIR / "laplacian_eigvecs.png"
+        if show:
+            print(
+                "[plot_laplacian_eigenvectors] off main thread; using Agg "
+                f"backend and saving to {save_path}."
+            )
+            show = False
+
+    import matplotlib.pyplot as plt
+
+    n_nodes, n_vecs = eigvecs.shape
+    cols = 4
+    rows = int(np.ceil(n_vecs / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(3.0 * cols, 1.9 * rows),
+                             sharex=True, sharey=True)
+    axes = np.atleast_1d(axes).reshape(rows, cols)
+
+    node_idx = np.arange(n_nodes)
+    node_labels = [n.site_name for n in graph.nodes]
+
+    for k in range(rows * cols):
+        ax = axes[k // cols, k % cols]
+        if k >= n_vecs:
+            ax.axis("off")
+            continue
+        v = eigvecs[:, k]
+        colors = ["#1f77b4" if x >= 0 else "#d62728" for x in v]
+        ax.bar(node_idx, v, color=colors, edgecolor="black", linewidth=0.4)
+        ax.axhline(0, color="black", linewidth=0.5)
+        ax.set_title(f"$v_{{{k}}}$  $\\lambda={eigvals[k]:.3g}$", fontsize=9)
+        ax.tick_params(axis="both", labelsize=7)
+        ax.set_xticks(node_idx)
+        if k // cols == rows - 1:
+            ax.set_xticklabels(node_labels, rotation=90, fontsize=6)
+        else:
+            ax.set_xticklabels([])
+
+    fig.suptitle(
+        f"Laplacian eigenvectors  (N={n_nodes} nodes, "
+        f"weighted by tendon stiffness)",
+        fontsize=11,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+
+    if save_path is not None:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150)
+        print(f"Saved Laplacian eigenvectors plot -> {save_path}")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
 def add_awgn(signal: np.ndarray, snr_db: float, rng: np.random.Generator | None = None) -> np.ndarray:
     """Add zero-mean Gaussian noise to ``signal`` at the given SNR (in dB).
 
@@ -452,6 +527,17 @@ def main() -> None:
         help="If --visualize-graph is set, also save the figure to this path (PNG/SVG/PDF).",
     )
     parser.add_argument(
+        "--plot-eigenvectors",
+        action="store_true",
+        help="Plot every Laplacian eigenvector as a bar chart and exit.",
+    )
+    parser.add_argument(
+        "--eigvecs-save",
+        type=Path,
+        default=None,
+        help="If set, save the eigenvectors figure to this path.",
+    )
+    parser.add_argument(
         "--plot-noisy-signal",
         action="store_true",
         help="After (or instead of) simulating, plot one node's 1D position with AWGN added.",
@@ -480,6 +566,17 @@ def main() -> None:
         help="If set, save the noisy-signal figure to this path.",
     )
     args = parser.parse_args()
+
+    if args.plot_eigenvectors:
+        model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
+        graph = build_graph(model)
+        weights = graph.sample_tendon_stiffness(model)
+        eigvals, eigvecs = graph.laplacian_eig(weights)
+        plot_laplacian_eigenvectors(
+            graph, eigvals, eigvecs,
+            save_path=args.eigvecs_save, show=True,
+        )
+        return
 
     if args.plot_noisy_signal:
         log_path = args.output or (OUTPUT_DIR / "sample_log.npz")
