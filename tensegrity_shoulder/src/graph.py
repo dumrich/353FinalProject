@@ -59,6 +59,46 @@ class TensegrityGraph:
     def num_edges(self) -> int:
         return len(self.edges)
 
+    def adjacency_matrix(self, weights: np.ndarray | None = None) -> np.ndarray:
+        """Symmetric (N, N) weighted adjacency matrix.
+
+        ``weights[k]`` is the weight assigned to edge ``k``. If omitted, every
+        edge gets weight 1 (unweighted graph). Parallel edges are summed.
+        """
+        n = self.num_nodes
+        if weights is None:
+            weights = np.ones(self.num_edges, dtype=np.float64)
+        if weights.shape != (self.num_edges,):
+            raise ValueError(
+                f"weights shape {weights.shape} != ({self.num_edges},)"
+            )
+        A = np.zeros((n, n), dtype=np.float64)
+        for edge, w in zip(self.edges, weights, strict=True):
+            i, j = edge.node_a, edge.node_b
+            A[i, j] += float(w)
+            A[j, i] += float(w)
+        return A
+
+    def laplacian_matrix(self, weights: np.ndarray | None = None) -> np.ndarray:
+        """Combinatorial graph Laplacian L = D - A."""
+        A = self.adjacency_matrix(weights)
+        D = np.diag(A.sum(axis=1))
+        return D - A
+
+    def laplacian_eig(
+        self, weights: np.ndarray | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Eigendecomposition of the Laplacian, sorted by ascending eigenvalue.
+
+        Returns ``(eigvals, eigvecs)`` where ``eigvecs[:, k]`` is the unit
+        eigenvector for ``eigvals[k]``. Uses ``np.linalg.eigh`` since L is
+        real symmetric.
+        """
+        L = self.laplacian_matrix(weights)
+        eigvals, eigvecs = np.linalg.eigh(L)
+        order = np.argsort(eigvals)
+        return eigvals[order], eigvecs[:, order]
+
     def sample_node_positions(
         self, model: mujoco.MjModel, data: mujoco.MjData
     ) -> np.ndarray:

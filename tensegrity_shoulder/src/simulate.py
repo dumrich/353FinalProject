@@ -308,6 +308,25 @@ def run(
     print(describe_graph(graph))
     print()
 
+    # Build Laplacian (weighted by per-cable stiffness) and its eigendecomp
+    # right after graph construction. Cached on the graph for downstream use.
+    edge_weights = graph.sample_tendon_stiffness(model)
+    L = graph.laplacian_matrix(edge_weights)
+    eigvals, eigvecs = graph.laplacian_eig(edge_weights)
+    graph.laplacian = L  # type: ignore[attr-defined]
+    graph.laplacian_eigvals = eigvals  # type: ignore[attr-defined]
+    graph.laplacian_eigvecs = eigvecs  # type: ignore[attr-defined]
+
+    np.set_printoptions(precision=4, suppress=True)
+    print(f"Laplacian L: shape={L.shape}, symmetric={np.allclose(L, L.T)}, "
+          f"rank={int(np.linalg.matrix_rank(L))}")
+    print(f"Eigenvalues (ascending, n={len(eigvals)}):")
+    print(f"  {eigvals}")
+    fiedler = eigvecs[:, 1]
+    print(f"Fiedler vector (eigvec for lambda_2 = {eigvals[1]:.4f}):")
+    print(f"  {fiedler}")
+    print()
+
     _settle(model, data, steps=200)
 
     if visualize_only:
