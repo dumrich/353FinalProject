@@ -81,9 +81,3 @@ import numpy as np
 log = np.load("output/sample_log.npz")
 print(log["node_positions"].shape, log["tendon_stiffness"].shape)
 ```
-
-## Spectral analysis
-
-After building the graph we compute the combinatorial Laplacian `L = D - A`
-weighted by per-cable stiffness, then take its eigendecomposition.
-The lowest eigenvectors give a basis for graph-smooth signals.

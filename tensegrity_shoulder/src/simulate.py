@@ -222,6 +222,144 @@ def plot_laplacian_eigenvectors(
         plt.close(fig)
 
 
+def gft(signal: np.ndarray, eigvecs: np.ndarray) -> np.ndarray:
+    """Graph Fourier Transform: f_hat = U^T f.
+
+    ``signal`` may be (N,) or (T, N); eigvecs is the (N, N) Laplacian
+    eigenvector matrix with columns sorted by ascending eigenvalue.
+    """
+    return signal @ eigvecs  # (T, N) @ (N, N) -> (T, N) of GFT coefficients
+
+
+def igft(coeffs: np.ndarray, eigvecs: np.ndarray) -> np.ndarray:
+    """Inverse Graph Fourier Transform: f = U f_hat."""
+    return coeffs @ eigvecs.T
+
+
+def gft_lowpass(
+    signal: np.ndarray, eigvecs: np.ndarray, keep_k: int
+) -> np.ndarray:
+    """Reconstruct ``signal`` from only the lowest ``keep_k`` graph frequencies."""
+    coeffs = gft(signal, eigvecs)
+    mask = np.zeros(coeffs.shape[-1], dtype=bool)
+    mask[:keep_k] = True
+    coeffs_lp = coeffs * mask
+    return igft(coeffs_lp, eigvecs)
+
+
+def plot_gft_denoised(
+    log_path: Path,
+    eigvecs: np.ndarray,
+    eigvals: np.ndarray,
+    node_names: list[str],
+    node: str | int = 0,
+    axis: str = "x",
+    snr_db: float = 20.0,
+    keep_k: int = 4,
+    save_path: Path | None = None,
+    show: bool = True,
+) -> None:
+    """Add 20 dB AWGN to the (T, N) position trace, GFT-low-pass filter it,
+    and plot the chosen node's clean / noisy / denoised time series.
+    """
+    import threading
+
+    import matplotlib
+
+    on_main_thread = threading.current_thread() is threading.main_thread()
+    if not on_main_thread:
+        matplotlib.use("Agg", force=True)
+        if save_path is None:
+            save_path = OUTPUT_DIR / "gft_denoised.png"
+        if show:
+            print(
+                "[plot_gft_denoised] off main thread; using Agg backend "
+                f"and saving to {save_path}."
+            )
+            show = False
+
+    import matplotlib.pyplot as plt
+
+    log = np.load(log_path, allow_pickle=False)
+    times = log["times"]
+    positions = log["node_positions"]  # (T, N, 3)
+    log_names = [str(n) for n in log["node_names"].tolist()]
+
+    if log_names != node_names:
+        raise ValueError(
+            "Node ordering in log does not match the current graph; "
+            "rebuild the log so the GFT basis aligns."
+        )
+
+    if isinstance(node, str):
+        if node not in node_names:
+            raise ValueError(f"Node {node!r} not in graph; available: {node_names}")
+        node_idx = node_names.index(node)
+    else:
+        node_idx = int(node)
+    node_name = node_names[node_idx]
+    axis_idx = {"x": 0, "y": 1, "z": 2}[axis.lower()]
+
+    # Clean (T, N) graph signal for this axis.
+    clean_TN = positions[:, :, axis_idx]
+
+    # Add per-node AWGN at SNR_dB. Compute noise power per node from each
+    # node's own AC variance so the SNR is per-channel.
+    rng = np.random.default_rng(0)
+    ac = clean_TN - clean_TN.mean(axis=0, keepdims=True)
+    sig_power = np.mean(ac ** 2, axis=0)  # (N,)
+    noise_power = sig_power / (10.0 ** (snr_db / 10.0))
+    noise = rng.normal(0.0, np.sqrt(noise_power)[None, :], size=clean_TN.shape)
+    noisy_TN = clean_TN + noise
+
+    # GFT low-pass acts on the *spatial* basis, so it assumes the signal is
+    # smooth across neighboring nodes. Raw world positions are not - each
+    # node sits at a fixed XYZ - so we subtract the per-node temporal mean
+    # before filtering and add it back afterward. That way we only filter
+    # the small fluctuation around each node's resting position, which is
+    # what we expect to be smooth on the graph.
+    node_mean = noisy_TN.mean(axis=0, keepdims=True)  # (1, N)
+    centered = noisy_TN - node_mean
+    denoised_centered = gft_lowpass(centered, eigvecs, keep_k=keep_k)
+    denoised_TN = denoised_centered + node_mean
+
+    clean = clean_TN[:, node_idx]
+    noisy = noisy_TN[:, node_idx]
+    denoised = denoised_TN[:, node_idx]
+
+    rmse_noisy = float(np.sqrt(np.mean((noisy - clean) ** 2)))
+    rmse_denoi = float(np.sqrt(np.mean((denoised - clean) ** 2)))
+    print(f"[GFT denoise] node={node_name} axis={axis} keep_k={keep_k}/{eigvecs.shape[1]}")
+    print(f"  RMSE noisy    vs clean: {rmse_noisy:.6f} m")
+    print(f"  RMSE denoised vs clean: {rmse_denoi:.6f} m  "
+          f"(improvement {rmse_noisy/rmse_denoi:.2f}x)")
+
+    fig, ax = plt.subplots(figsize=(10, 4.8))
+    ax.plot(times, noisy, color="#d62728", linewidth=0.9, alpha=0.8,
+            label=f"noisy ({snr_db:.0f} dB SNR)")
+    ax.plot(times, denoised, color="#2ca02c", linewidth=1.6,
+            label=f"GFT low-pass (keep {keep_k} of {eigvecs.shape[1]})")
+    ax.plot(times, clean, color="#1f77b4", linewidth=2.0, label="clean")
+    ax.set_xlabel("time [s]")
+    ax.set_ylabel(f"{axis.lower()} position [m]")
+    ax.set_title(
+        f"GFT-denoised position of '{node_name}'\n"
+        f"RMSE: noisy={rmse_noisy:.4f} m  ->  denoised={rmse_denoi:.4f} m"
+    )
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best")
+    fig.tight_layout()
+
+    if save_path is not None:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150)
+        print(f"Saved GFT denoise plot -> {save_path}")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
 def add_awgn(signal: np.ndarray, snr_db: float, rng: np.random.Generator | None = None) -> np.ndarray:
     """Add zero-mean Gaussian noise to ``signal`` at the given SNR (in dB).
 
@@ -538,6 +676,23 @@ def main() -> None:
         help="If set, save the eigenvectors figure to this path.",
     )
     parser.add_argument(
+        "--plot-gft-denoised",
+        action="store_true",
+        help="Add AWGN to the position signal across all nodes, GFT low-pass filter, and plot.",
+    )
+    parser.add_argument(
+        "--gft-keep-k",
+        type=int,
+        default=4,
+        help="Number of lowest-frequency Laplacian modes to keep (default: 4).",
+    )
+    parser.add_argument(
+        "--gft-save",
+        type=Path,
+        default=None,
+        help="If set, save the GFT denoise figure to this path.",
+    )
+    parser.add_argument(
         "--plot-noisy-signal",
         action="store_true",
         help="After (or instead of) simulating, plot one node's 1D position with AWGN added.",
@@ -575,6 +730,56 @@ def main() -> None:
         plot_laplacian_eigenvectors(
             graph, eigvals, eigvecs,
             save_path=args.eigvecs_save, show=True,
+        )
+        return
+
+    if args.plot_gft_denoised:
+        log_path = args.output or (OUTPUT_DIR / "sample_log.npz")
+        if not log_path.exists():
+            print(f"No log at {log_path}; running headless first to generate it...")
+            run(
+                duration=args.duration if args.duration is not None else 5.0,
+                headless=True,
+                output_path=log_path,
+            )
+        model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
+        graph = build_graph(model)
+
+        # For GFT-based denoising of *positions*, the underlying smoothness
+        # assumption is that graph-neighboring nodes have similar values.
+        # Cable-only edges don't satisfy that (two cable-connected sites
+        # live on different rigid bodies and move differently), but two
+        # sites on the *same* rigid body translate/rotate together. So we
+        # augment the cable adjacency with a fully-connected, high-weight
+        # block among same-body nodes purely for the purpose of building
+        # a Laplacian basis suited to denoising.
+        cable_w = graph.sample_tendon_stiffness(model)
+        A = graph.adjacency_matrix(cable_w)
+        rigid_w = 10.0 * float(cable_w.max())  # dominate cable weights
+        for i in range(graph.num_nodes):
+            for j in range(i + 1, graph.num_nodes):
+                if graph.nodes[i].body_id == graph.nodes[j].body_id:
+                    A[i, j] += rigid_w
+                    A[j, i] += rigid_w
+        L = np.diag(A.sum(axis=1)) - A
+        eigvals, eigvecs = np.linalg.eigh(L)
+        order = np.argsort(eigvals)
+        eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+        try:
+            node_arg: str | int = int(args.noise_node)
+        except ValueError:
+            node_arg = args.noise_node
+        plot_gft_denoised(
+            log_path=log_path,
+            eigvecs=eigvecs,
+            eigvals=eigvals,
+            node_names=[n.site_name for n in graph.nodes],
+            node=node_arg,
+            axis=args.noise_axis,
+            snr_db=args.noise_snr_db,
+            keep_k=args.gft_keep_k,
+            save_path=args.gft_save,
+            show=True,
         )
         return
 
